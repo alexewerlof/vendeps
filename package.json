@@ -1,0 +1,20 @@
+{
+  "name": "un",
+  "version": "1.0.0",
+  "description": "A simple utility to un-npm a package to an ESM module.",
+  "main": "index.js",
+  "bin": {
+    "un": "index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "esbuild": "^0.27.3",
+    "jty": "^4.0.0"
+  }
+}
