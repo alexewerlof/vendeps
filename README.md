@@ -1,8 +1,9 @@
-# toesm
+# vendeps
 
 **One ESM file per dependency, ready for the browser.**
+Vendor your dependencies for added reliability, security and simplicity.
 
-`toesm` reads the `dependencies` in your `package.json`, uses [esbuild](https://esbuild.github.io/) to bundle each one into a single ESM file, and drops the results into a `dependencies/` folder. Your browser code can then import them with plain `import` statements — no bundler, no build step, no CDN required.
+`vendeps` reads the `dependencies` in your `package.json`, uses [esbuild](https://esbuild.github.io/) to bundle each one into a single ESM file, and drops the results into a `dependencies/` folder. Your browser code can then import them with plain `import` statements — no bundler, no build step, no CDN required.
 
 ```js
 import { html, render } from './dependencies/lit-html.js'
@@ -16,15 +17,16 @@ Modern browsers support ES modules natively, but most npm packages still ship Co
 - **Security** — Every page load fetches code from a third-party server, opening the door to man-in-the-middle attacks or CDN compromises.
 - **Reliability** — Your app's uptime becomes coupled to the CDN's uptime.
 - **Reproducibility** — CDN URLs can change, disappear, or serve different versions.
+- **Predictability** — You know exactly what code your users are running.
 
-`toesm` takes a different approach: convert each dependency into a single, self-contained `.js` file that you **check into your repository**. Your app ships everything it needs — no external requests at runtime, no surprises.
+`vendeps` takes a different approach: convert each dependency into a single, self-contained `.js` file that you **check into your repository**. Your app ships everything it needs — no external requests at runtime, no surprises.
 
 ## Quick Start
 
 No installation required. In any project that has a `package.json` with `dependencies`:
 
 ```bash
-npx toesm
+npx vendeps
 ```
 
 That's it. A `dependencies/` folder appears with one `.js` file per dependency. Point your `<script type="module">` at them and go.
@@ -34,7 +36,7 @@ That's it. A `dependencies/` folder appears with one `.js` file per dependency. 
 If you prefer to install it as a dev dependency:
 
 ```bash
-npm install --save-dev toesm
+npm install --save-dev vendeps
 ```
 
 ### Automate with `postinstall`
@@ -44,7 +46,7 @@ To ensure the `dependencies/` folder is always up to date after `npm install` or
 ```json
 {
   "scripts": {
-    "postinstall": "toesm --minify"
+    "postinstall": "vendeps --minify"
   }
 }
 ```
@@ -54,7 +56,7 @@ Now every `npm ci` on your CI server or a fresh clone will automatically populat
 ## CLI Options
 
 ```
-npx toesm [options]
+npx vendeps [options]
 ```
 
 | Option | Description |
@@ -67,27 +69,27 @@ npx toesm [options]
 
 ```bash
 # Bundle everything into dependencies/
-npx toesm
+npx vendeps
 
 # Minified production bundles
-npx toesm --minify
+npx vendeps --minify
 
 # Output to a custom folder
-npx toesm --target vendor
+npx vendeps --target vendor
 
 # Combine options
-npx toesm --minify --target lib/vendor
+npx vendeps --minify --target lib/vendor
 ```
 
 ## Per-Dependency Configuration
 
-By default, `toesm` re-exports everything from each dependency:
+By default, `vendeps` re-exports everything from each dependency:
 
 ```js
 // generated: export * from 'some-package'
 ```
 
-You can customize this behavior per-dependency via the `"toesm"` key in your `package.json`:
+You can customize this behavior per-dependency via the `"vendeps"` key in your `package.json`:
 
 ```json
 {
@@ -97,7 +99,7 @@ You can customize this behavior per-dependency via the `"toesm"` key in your `pa
     "some-internal-tool": "^1.0.0",
     "@huggingface/transformers": "^3.0.0"
   },
-  "toesm": {
+  "vendeps": {
     "some-internal-tool": null,
     "chart.js": {
       "export": "{ Chart }",
@@ -141,7 +143,7 @@ import { pipeline } from './dependencies/@huggingface/transformers.js'
 ## Recommended Workflow
 
 1. **Add your npm dependencies** as usual with `npm install`.
-2. **Run `npx toesm`** (or let `postinstall` handle it).
+2. **Run `npx vendeps`** (or let `postinstall` handle it).
 3. **Check in the `dependencies/` folder** to version control.
 4. **Import from `dependencies/`** in your browser JS files.
 

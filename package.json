@@ -1,11 +1,17 @@
 {
-  "name": "toesm",
+  "name": "vendeps",
   "version": "1.0.0",
   "description": "Uses esbuild to convert npm packages to ESM bundles for the browser.",
   "main": "index.js",
   "bin": {
-    "toesm": "index.js"
+    "vendeps": "index.js"
   },
+  "files": [
+    "index.js",
+    "parser.js",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "scripts": {
     "test": "node --test"
@@ -24,12 +30,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alexewerlof/toesm.git"
+    "url": "git+https://github.com/alexewerlof/vendeps.git"
   },
   "bugs": {
-    "url": "https://github.com/alexewerlof/toesm/issues"
+    "url": "https://github.com/alexewerlof/vendeps/issues"
   },
-  "homepage": "https://github.com/alexewerlof/toesm#readme",
+  "homepage": "https://github.com/alexewerlof/vendeps#readme",
   "engines": {
     "node": ">=24"
   },

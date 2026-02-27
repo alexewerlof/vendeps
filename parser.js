@@ -64,7 +64,7 @@ function normalizedConfig(name, config) {
     }
 }
 
-function toEslintOptions(name, config, resolveDir, minify, outfile) {
+function toEsbuildOptions(name, config, resolveDir, minify, outfile) {
     const { contents, define } = normalizedConfig(name, config)
     console.log(`${name}: ${contents}`)
     return {
@@ -84,10 +84,10 @@ function toEslintOptions(name, config, resolveDir, minify, outfile) {
 export const _test = {
     configObj,
     normalizedConfig,
-    toEslintOptions,
+    toEsbuildOptions,
 }
 
-export function toEslintOptionsArr(names, toesmConfig = {}, resolveDir, minify, targetDir) {
+export function toEsbuildOptionsArr(names, vendepsConfig = {}, resolveDir, minify, targetDir) {
     if (!isArr(names)) {
         throw new TypeError(`Expected an array of names. Got ${names} (${typeof names}).`)
     }
@@ -102,13 +102,13 @@ export function toEslintOptionsArr(names, toesmConfig = {}, resolveDir, minify, 
     }
 
     return names.map((name) => {
-        const config = toesmConfig?.[name];
+        const config = vendepsConfig?.[name];
         if (skipConfig.includes(config)) {
             console.warn(`Skipping ${name} as its config is ${config}.`)
             return null
         }
         try {
-            return toEslintOptions(name, config, resolveDir, minify, join(targetDir, `${name}.js`))
+            return toEsbuildOptions(name, config, resolveDir, minify, join(targetDir, `${name}.js`))
         } catch (err) {
             err.message = `Processing config for ${name}: ${err.message}`
             throw err

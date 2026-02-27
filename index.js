@@ -2,9 +2,9 @@
 import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import * as esbuild from 'esbuild'
-import { toEslintOptionsArr } from './parser.js'
+import { toEsbuildOptionsArr } from './parser.js'
 
-const CONFIG_KEY = 'toesm'
+const CONFIG_KEY = 'vendeps'
 const DEFAULT_TARGET_DIR = 'dependencies'
 
 function getTarget(argv) {
@@ -16,9 +16,9 @@ const targetDir = getTarget(process.argv)
 
 if (process.argv.includes('--help')) {
     console.log([
-        'toesm — Convert npm dependencies to ESM bundles ready for the browser environment.',
+        'vendeps — Convert npm dependencies to ESM bundles ready for the browser environment.',
         '',
-        'Usage: npx toesm [options]',
+        'Usage: npx vendeps [options]',
         '',
         'Options:',
         `  --target <dir>  Output directory (default: "${DEFAULT_TARGET_DIR}")`,
@@ -26,7 +26,7 @@ if (process.argv.includes('--help')) {
         '  --help          Show this help message',
         '',
         'Reads "dependencies" from package.json and bundles each one into <target>/<name>.js.',
-        'Per-dependency config can be set via the "toesm" key in package.json.',
+        'Per-dependency config can be set via the "vendeps" key in package.json.',
         '',
         'Scoped packages (e.g. @huggingface/transformers) are output as <target>/@scope/<name>.js.',
     ].join('\n'))
@@ -34,13 +34,13 @@ if (process.argv.includes('--help')) {
 }
 
 async function getDependenciesAndConfig(path) {
-    const { dependencies, [CONFIG_KEY]: toesmConfig } = JSON.parse(await readFile(path, 'utf-8'))
-    return { dependencies, toesmConfig }
+    const { dependencies, [CONFIG_KEY]: vendepsConfig } = JSON.parse(await readFile(path, 'utf-8'))
+    return { dependencies, vendepsConfig }
 }
 
 async function readConfig(resolveDir, minify) {
-    const { dependencies, toesmConfig } = await getDependenciesAndConfig(join(resolveDir, 'package.json'))
-    return toEslintOptionsArr(Object.keys(dependencies), toesmConfig, resolveDir, minify, targetDir).filter(Boolean)
+    const { dependencies, vendepsConfig } = await getDependenciesAndConfig(join(resolveDir, 'package.json'))
+    return toEsbuildOptionsArr(Object.keys(dependencies), vendepsConfig, resolveDir, minify, targetDir).filter(Boolean)
 }
 
 async function main() {
