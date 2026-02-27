@@ -27,7 +27,7 @@ function configObj(frm, exp = '*', def = {}) {
     if (Array.isArray(def)) {
         const arr = def
         def = {}
-        
+
         for (let i = 0; i < arr.length; i++) {
             const item = arr[i]
             if (!isStr(item)) {
@@ -87,7 +87,7 @@ export const _test = {
     toEslintOptions,
 }
 
-export function toEslintOptionsArr(names, unConfig = {}, resolveDir, minify, targetDir) {
+export function toEslintOptionsArr(names, toesmConfig = {}, resolveDir, minify, targetDir) {
     if (!isArr(names)) {
         throw new TypeError(`Expected an array of names. Got ${names} (${typeof names}).`)
     }
@@ -102,7 +102,7 @@ export function toEslintOptionsArr(names, unConfig = {}, resolveDir, minify, tar
     }
 
     return names.map((name) => {
-        const config = unConfig?.[name];
+        const config = toesmConfig?.[name];
         if (skipConfig.includes(config)) {
             console.warn(`Skipping ${name} as its config is ${config}.`)
             return null

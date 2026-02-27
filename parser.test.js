@@ -131,7 +131,7 @@ describe('normalizedConfig()', () => {
             args: ['dep4', { export: '*', from: 'path/to/file4.js', define: { key1: 'value1', key2: 'value2' } }],
             expected: {
                 contents: "export * from 'path/to/file4.js'",
-                define: { key1: 'value1', key2: 'value2'},
+                define: { key1: 'value1', key2: 'value2' },
             },
         },
         {
@@ -226,7 +226,7 @@ describe('toEslintOptions()', () => {
 describe('toEslintOptionsArr()', () => {
     it('should return an array of options for valid inputs', () => {
         const names = ['example1', 'example2'];
-        const unConfig = {
+        const toesmConfig = {
             example1: 'config1',
             example2: { export: 'default', from: 'source2' },
         };
@@ -234,7 +234,7 @@ describe('toEslintOptionsArr()', () => {
         const minify = true;
         const targetDir = '/path/to/target';
 
-        const result = toEslintOptionsArr(names, unConfig, resolveDir, minify, targetDir);
+        const result = toEslintOptionsArr(names, toesmConfig, resolveDir, minify, targetDir);
 
         assert.deepStrictEqual(result, [
             {
@@ -266,7 +266,7 @@ describe('toEslintOptionsArr()', () => {
 
     it('should skip names with null or false configs', () => {
         const names = ['example11', 'example22', 'example33'];
-        const unConfig = {
+        const toesmConfig = {
             example11: null,
             example22: false,
             example33: 'config3',
@@ -275,7 +275,7 @@ describe('toEslintOptionsArr()', () => {
         const minify = false;
         const targetDir = '/path/to/target';
 
-        const result = toEslintOptionsArr(names, unConfig, resolveDir, minify, targetDir);
+        const result = toEslintOptionsArr(names, toesmConfig, resolveDir, minify, targetDir);
 
         assert.deepStrictEqual(result, [
             null,
@@ -297,12 +297,12 @@ describe('toEslintOptionsArr()', () => {
 
     it('should throw an error for invalid inputs', () => {
         const names = 'not-an-array';
-        const unConfig = {};
+        const toesmConfig = {};
         const resolveDir = '/path/to/dir';
         const minify = true;
         const targetDir = '/path/to/target';
 
-        assert.throws(() => toEslintOptionsArr(names, unConfig, resolveDir, minify, targetDir), {
+        assert.throws(() => toEslintOptionsArr(names, toesmConfig, resolveDir, minify, targetDir), {
             name: 'TypeError',
             message: 'Expected an array of names. Got not-an-array (string).',
         });
@@ -310,14 +310,14 @@ describe('toEslintOptionsArr()', () => {
 
     it('should returns a config for anything that is not opted out', () => {
         const names = ['example1a', 'example2a', 'example3a'];
-        const unConfig = {
+        const toesmConfig = {
             example2a: false,
         };
         const resolveDir = '/path/to/dir';
         const minify = false;
         const targetDir = '/path/to/target';
 
-        const result = toEslintOptionsArr(names, unConfig, resolveDir, minify, targetDir);
+        const result = toEslintOptionsArr(names, toesmConfig, resolveDir, minify, targetDir);
 
         assert.deepStrictEqual(result, [
             {
@@ -350,12 +350,12 @@ describe('toEslintOptionsArr()', () => {
 
     it('should returns a eslint options array even when there are no configs', () => {
         const names = ['example1x', 'example2x', 'example3x'];
-        const unConfig = undefined;
+        const toesmConfig = undefined;
         const resolveDir = '/path/to/dir';
         const minify = true;
         const targetDir = '/path/to/target';
 
-        const result = toEslintOptionsArr(names, unConfig, resolveDir, minify, targetDir);
+        const result = toEslintOptionsArr(names, toesmConfig, resolveDir, minify, targetDir);
 
         assert.deepStrictEqual(result, [
             {

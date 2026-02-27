@@ -1,10 +1,10 @@
 {
-  "name": "un",
+  "name": "toesm",
   "version": "1.0.0",
-  "description": "A simple utility to un-npm a package to an ESM module.",
+  "description": "Uses esbuild to convert npm packages to ESM bundles for the browser.",
   "main": "index.js",
   "bin": {
-    "un": "index.js"
+    "toesm": "index.js"
   },
   "scripts": {
     "test": "node --test"
