@@ -14,10 +14,10 @@ import confetti from './dependencies/canvas-confetti.js'
 
 Modern browsers support ES modules natively, but most npm packages still ship CommonJS or split their code across dozens of files. Using a CDN solves the format problem but introduces new ones:
 
-- **Security** — Every page load fetches code from a third-party server, opening the door to man-in-the-middle attacks or CDN compromises.
-- **Reliability** — Your app's uptime becomes coupled to the CDN's uptime.
-- **Reproducibility** — CDN URLs can change, disappear, or serve different versions.
-- **Predictability** — You know exactly what code your users are running.
+- **Security** — Every page load fetches code from a third-party server, opening the door to man-in-the-middle attacks or CDN compromises. Vendeps allows you to version-control your dependencies for audit.
+- **Reliability** — Your app's uptime becomes coupled to the CDN's uptime. Vendeps decouples your app's uptime from any CDN.
+- **Reproducibility** — CDN URLs can change, disappear, or serve different versions. Vendeps ensures that your app always uses the same version of a dependency.
+- **Predictability** — You know exactly what code your users are running. Vendeps ensures that the exact same dependency you used during development is used in production.
 
 `vendeps` takes a different approach: convert each dependency into a single, self-contained `.js` file that you **check into your repository**. Your app ships everything it needs — no external requests at runtime, no surprises.
 
@@ -30,6 +30,32 @@ npx vendeps
 ```
 
 That's it. A `dependencies/` folder appears with one `.js` file per dependency. Point your `<script type="module">` at them and go.
+
+### Even better: use Import Maps
+
+Instead of rewriting your imports to point at `./dependencies/**/*.js`, you can use a [browser import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap) so your source code keeps using bare specifiers — exactly like Node.js:
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "lit-html": "./dependencies/lit-html.js",
+    "canvas-confetti": "./dependencies/canvas-confetti.js"
+  }
+}
+</script>
+<script type="module" src="app.js"></script>
+```
+
+Now your application code works without any path changes:
+
+```js
+// app.js — same imports you'd write in Node
+import { html, render } from 'lit-html'
+import confetti from 'canvas-confetti'
+```
+
+The browser resolves the bare specifiers through the import map, so your code stays portable between Node.js and the browser with zero modifications.
 
 ## Installation
 
@@ -52,6 +78,8 @@ To ensure the `dependencies/` folder is always up to date after `npm install` or
 ```
 
 Now every `npm ci` on your CI server or a fresh clone will automatically populate the `dependencies/` folder with minified bundles — no extra step to remember.
+
+> ⚠️ **Dependency drift** — The vendored bundles are snapshots of whatever versions are installed at build time. If you update a dependency version in `package.json` (or run `npm update`), remember to re-run `npx vendeps` (or trigger a fresh `npm ci`) so the bundles stay in sync. Checking in the `dependencies/` folder helps catch drift — any version bump will show up as a diff in your commit.
 
 ## CLI Options
 
@@ -165,6 +193,10 @@ By committing the `dependencies/` folder, you get:
 - **No CDN dependency** — your app works even if every CDN on the internet goes down.
 - **Auditability** — the exact code your users receive is visible in your repo.
 - **Reproducibility** — every clone, every checkout, every deploy uses the exact same dependency code.
+
+## Limitations
+
+> ⚠️ **CSS-only packages** — `vendeps` bundles JavaScript only. If a dependency ships exclusively CSS (e.g. `normalize.css`), it will not be handled. You will need to copy those assets manually or use a separate tool.
 
 ## License
 
