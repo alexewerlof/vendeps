@@ -1,6 +1,6 @@
 import { it, describe } from 'node:test';
 import assert from 'node:assert';
-import { _test, toEsbuildOptionsArr } from './parser.js';
+import { _test, packageJsonToEsbuildOptions } from './parser.js';
 
 function tableTest(fn, testCases) {
     testCases.forEach(({ name, args, expected, error }) => {
@@ -182,7 +182,7 @@ describe('toEsbuildOptions()', () => {
 
         assert.throws(() => toEsbuildOptions(name, config, resolveDir, minify, outfile), {
             name: 'TypeError',
-            message: 'When specified, config should be a string or object, got null.'
+            message: 'Error processing config for example: When specified, config should be a string or object, got null.'
         });
     });
 
@@ -195,7 +195,7 @@ describe('toEsbuildOptions()', () => {
 
         assert.throws(() => toEsbuildOptions(name, config, resolveDir, minify, outfile), {
             name: 'TypeError',
-            message: 'When specified, config should be a string or object, got array.'
+            message: 'Error processing config for example: When specified, config should be a string or object, got array.'
         });
     });
 
@@ -224,6 +224,8 @@ describe('toEsbuildOptions()', () => {
 });
 
 describe('toEsbuildOptionsArr()', () => {
+    const { toEsbuildOptionsArr } = _test;
+
     it('should return an array of options for valid inputs', () => {
         const names = ['example1', 'example2'];
         const vendepsConfig = {
@@ -264,36 +266,6 @@ describe('toEsbuildOptionsArr()', () => {
         ]);
     });
 
-    it('should skip names with null or false configs', () => {
-        const names = ['example11', 'example22', 'example33'];
-        const vendepsConfig = {
-            example11: null,
-            example22: false,
-            example33: 'config3',
-        };
-        const resolveDir = '/path/to/dir';
-        const minify = false;
-        const targetDir = '/path/to/target';
-
-        const result = toEsbuildOptionsArr(names, vendepsConfig, resolveDir, minify, targetDir);
-
-        assert.deepStrictEqual(result, [
-            null,
-            null,
-            {
-                bundle: true,
-                minify: false,
-                format: 'esm',
-                define: {},
-                stdin: {
-                    contents: "export * from 'config3'",
-                    resolveDir: '/path/to/dir',
-                    loader: 'js',
-                },
-                outfile: '/path/to/target/example33.js',
-            },
-        ]);
-    });
 
     it('should throw an error for invalid inputs', () => {
         const names = 'not-an-array';
@@ -308,45 +280,7 @@ describe('toEsbuildOptionsArr()', () => {
         });
     });
 
-    it('should returns a config for anything that is not opted out', () => {
-        const names = ['example1a', 'example2a', 'example3a'];
-        const vendepsConfig = {
-            example2a: false,
-        };
-        const resolveDir = '/path/to/dir';
-        const minify = false;
-        const targetDir = '/path/to/target';
-
-        const result = toEsbuildOptionsArr(names, vendepsConfig, resolveDir, minify, targetDir);
-
-        assert.deepStrictEqual(result, [
-            {
-                bundle: true,
-                minify: false,
-                format: 'esm',
-                define: {},
-                stdin: {
-                    contents: "export * from 'example1a'",
-                    resolveDir: '/path/to/dir',
-                    loader: 'js',
-                },
-                outfile: '/path/to/target/example1a.js',
-            },
-            null,
-            {
-                bundle: true,
-                minify: false,
-                format: 'esm',
-                define: {},
-                stdin: {
-                    contents: "export * from 'example3a'",
-                    resolveDir: '/path/to/dir',
-                    loader: 'js',
-                },
-                outfile: '/path/to/target/example3a.js',
-            },
-        ]);
-    });
+    // Skipping test for null/false configs: now handled in packageJsonToEsbuildOptions
 
     it('should returns an esbuild options array even when there are no configs', () => {
         const names = ['example1x', 'example2x', 'example3x'];
@@ -395,5 +329,95 @@ describe('toEsbuildOptionsArr()', () => {
                 outfile: '/path/to/target/example3x.js',
             },
         ]);
+    });
+});
+
+describe('packageJsonToEsbuildOptions()', () => {
+    it('should throw if packageJson is not an object', async () => {
+        await assert.rejects(
+            () => packageJsonToEsbuildOptions(null, 'vendeps', '/modules', '/target', false),
+            {
+                name: 'TypeError',
+                message: 'Invalid package.json object'
+            }
+        );
+    });
+
+    it('should throw if dependencies is missing', async () => {
+        await assert.rejects(
+            () => packageJsonToEsbuildOptions({}, 'vendeps', '/modules', '/target', false),
+            {
+                name: 'TypeError',
+                message: "No 'dependencies' object found"
+            }
+        );
+    });
+
+    it('should throw if no dependencies to process after filtering', async () => {
+        const pkg = { dependencies: { a: '1.0.0' }, vendeps: { a: false } };
+        await assert.rejects(
+            () => packageJsonToEsbuildOptions(pkg, 'vendeps', '/modules', '/target', false),
+            {
+                name: 'Error',
+                message: 'No dependencies to process after filtering with config.'
+            }
+        );
+    });
+
+    it('should return correct esbuild options array with filtered dependencies', async () => {
+        const pkg = {
+            dependencies: {
+                a: '1.0.0',
+                b: '2.0.0',
+                c: '3.0.0',
+                d: '4.0.0',
+                e: '5.0.0',
+            },
+            vendeps: {
+                b: false,
+                d: null,
+                // a, c, e are included
+            }
+        };
+        const result = await packageJsonToEsbuildOptions(pkg, 'vendeps', '/modules', '/target', true);
+        // Only a, c, e should be present
+        assert.deepStrictEqual(result, [
+        {
+            bundle: true,
+            define: {},
+            format: 'esm',
+            minify: true,
+            outfile: '/target/a.js',
+            stdin: {
+                contents: "export * from 'a'",
+                loader: 'js',
+                resolveDir: '/modules'
+            }
+        },
+        {
+            bundle: true,
+            define: {},
+            format: 'esm',
+            minify: true,
+            outfile: '/target/c.js',
+            stdin: {
+                contents: "export * from 'c'",
+                loader: 'js',
+                resolveDir: '/modules'
+            }
+        },
+        {
+            bundle: true,
+            define: {},
+            format: 'esm',
+            minify: true,
+            outfile: '/target/e.js',
+            stdin: {
+                contents: "export * from 'e'",
+                loader: 'js',
+                resolveDir: '/modules'
+            }
+        }
+    ]);
     });
 });

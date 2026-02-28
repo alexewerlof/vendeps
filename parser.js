@@ -1,6 +1,6 @@
 import { isArr, isBool, isObj, isStr } from "jty"
 import { join } from "node:path"
-const skipConfig = [null, false]
+const SKIP_CONFIG_VALUES = [null, false]
 
 function configObj(frm, exp = '*', def = {}) {
     if (!isStr(frm)) {
@@ -65,29 +65,28 @@ function normalizedConfig(name, config) {
 }
 
 function toEsbuildOptions(name, config, resolveDir, minify, outfile) {
-    const { contents, define } = normalizedConfig(name, config)
-    console.log(`${name}: ${contents}`)
-    return {
-        bundle: true,
-        minify,
-        format: 'esm',
-        define,
-        stdin: {
-            contents,
-            resolveDir,
-            loader: 'js',
-        },
-        outfile,
+    try {
+        const { contents, define } = normalizedConfig(name, config)
+        console.log(`${name}: ${contents}`)
+        return {
+            bundle: true,
+            minify,
+            format: 'esm',
+            define,
+            stdin: {
+                contents,
+                resolveDir,
+                loader: 'js',
+            },
+            outfile,
+        }
+    } catch (err) {
+        err.message = `Error processing config for ${name}: ${err.message}`
+        throw err
     }
 }
 
-export const _test = {
-    configObj,
-    normalizedConfig,
-    toEsbuildOptions,
-}
-
-export function toEsbuildOptionsArr(names, vendepsConfig = {}, resolveDir, minify, targetDir) {
+function toEsbuildOptionsArr(names, vendepsConfig = {}, resolveDir, minify, targetDir) {
     if (!isArr(names)) {
         throw new TypeError(`Expected an array of names. Got ${names} (${typeof names}).`)
     }
@@ -101,17 +100,31 @@ export function toEsbuildOptionsArr(names, vendepsConfig = {}, resolveDir, minif
         throw new TypeError(`Expected 'targetDir' to be a string. Got ${targetDir} (${typeof targetDir}).`)
     }
 
-    return names.map((name) => {
-        const config = vendepsConfig?.[name];
-        if (skipConfig.includes(config)) {
-            console.warn(`Skipping ${name} as its config is ${config}.`)
-            return null
-        }
-        try {
-            return toEsbuildOptions(name, config, resolveDir, minify, join(targetDir, `${name}.js`))
-        } catch (err) {
-            err.message = `Processing config for ${name}: ${err.message}`
-            throw err
-        }
-    })
+    return names.map((name) => toEsbuildOptions(name, vendepsConfig?.[name], resolveDir, minify, join(targetDir, `${name}.js`)))
+}
+
+export async function packageJsonToEsbuildOptions(packageJson, configKey, resolveDir, targetDir, minify) {
+    if (!isObj(packageJson)) {
+        throw new TypeError(`Invalid package.json object`)
+    }
+    const { dependencies, [configKey]: vendepsConfig } = packageJson
+    if (!isObj(dependencies)) {
+        throw new TypeError(`No 'dependencies' object found`)
+    }
+
+    const dependencyNames = Object.keys(dependencies)
+        .filter((name) => vendepsConfig && !SKIP_CONFIG_VALUES.includes(vendepsConfig?.[name]))
+    
+    if (dependencyNames.length === 0) {
+        throw new Error('No dependencies to process after filtering with config.')
+    }
+
+    return toEsbuildOptionsArr(dependencyNames, vendepsConfig, resolveDir, minify, targetDir).filter(Boolean)
+}
+
+export const _test = {
+    configObj,
+    normalizedConfig,
+    toEsbuildOptions,
+    toEsbuildOptionsArr,
 }

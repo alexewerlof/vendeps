@@ -1,64 +1,79 @@
 #!/usr/bin/env node
+
 import { mkdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { hideBin } from 'yargs/helpers'
+import yargs from 'yargs'
 import * as esbuild from 'esbuild'
-import { toEsbuildOptionsArr } from './parser.js'
 
-const CONFIG_KEY = 'vendeps'
-const DEFAULT_TARGET_DIR = 'dependencies'
-
-function getTarget(argv) {
-    const i = argv.indexOf('--target')
-    return i !== -1 && argv[i + 1] ? argv[i + 1] : DEFAULT_TARGET_DIR
+async function loadJson(filePath) {
+    try {
+        const content = await readFile(filePath, 'utf-8')
+        return JSON.parse(content)
+    } catch (err) {
+        throw new Error(`❌ Failed to load JSON from ${filePath}: ${err.message}`)
+    }
 }
 
-const targetDir = getTarget(process.argv)
+import { fileURLToPath } from 'node:url'
+import { packageJsonToEsbuildOptions } from './parser'
 
-if (process.argv.includes('--help')) {
-    console.log([
-        'vendeps — Convert npm dependencies to ESM bundles ready for the browser environment.',
-        '',
-        'Usage: npx vendeps [options]',
-        '',
-        'Options:',
-        `  --target <dir>  Output directory (default: "${DEFAULT_TARGET_DIR}")`,
-        '  --minify        Minify the output bundles (default: false, also activates when NODE_ENV=production)',
-        '  --help          Show this help message',
-        '',
-        'Reads "dependencies" from package.json and bundles each one into <target>/<name>.js.',
-        'Per-dependency config can be set via the "vendeps" key in package.json.',
-        '',
-        'Scoped packages (e.g. @huggingface/transformers) are output as <target>/@scope/<name>.js.',
-    ].join('\n'))
-    process.exit(0)
-}
+const vendepsPackageJson = await loadJson(
+    resolve(dirname(fileURLToPath(import.meta.url)), 'package.json')
+)
 
-async function getDependenciesAndConfig(path) {
-    const { dependencies, [CONFIG_KEY]: vendepsConfig } = JSON.parse(await readFile(path, 'utf-8'))
-    return { dependencies, vendepsConfig }
-}
+const CONFIG_KEY = vendepsPackageJson.name
+const DEFAULT_TARGET_DIR = './dependencies'
+const DEFAULT_SRC_FILE = './package.json'
 
-async function readConfig(resolveDir, minify) {
-    const { dependencies, vendepsConfig } = await getDependenciesAndConfig(join(resolveDir, 'package.json'))
-    return toEsbuildOptionsArr(Object.keys(dependencies), vendepsConfig, resolveDir, minify, targetDir).filter(Boolean)
-}
+const argv = yargs(hideBin(process.argv))
+    .usage(`Usage: npx ${vendepsPackageJson.name} [options]`)
+    .option('src', {
+        alias: 's',
+        type: 'string',
+        describe: `Path to the package.json file where dependencies and the optional ${CONFIG_KEY} config are located`,
+        default: DEFAULT_SRC_FILE,
+    })
+    .option('target', {
+        alias: 't',
+        type: 'string',
+        describe: 'Output directory (it will be created if it does not exist)',
+        default: DEFAULT_TARGET_DIR,
+    })
+    .option('minify', {
+        type: 'boolean',
+        describe: 'Minify the output bundles',
+        default: false,
+    })
+    .help('help')
+    .alias('help', 'h')
+    .epilog(vendepsPackageJson.description)
+    .argv;
+
+const targetDir = resolve(process.cwd(), argv.target)
+const srcFile = resolve(process.cwd(), argv.src)
+const nodeModulesDir = dirname(srcFile)
 
 async function main() {
-    const minify = process.argv.includes('--minify') || process.env.NODE_ENV === 'production'
+    // Only use --minify flag
+    const minify = argv.minify
 
-    console.time('Read config')
-    const optionsArr = await readConfig(process.cwd(), minify)
-    console.timeEnd('Read config')
+    console.time(`Read and parse ${srcFile}`)
+    const optionsArr = await packageJsonToEsbuildOptions(await loadJson(srcFile), CONFIG_KEY, nodeModulesDir, targetDir, minify)
+    console.timeEnd(`Read and parse ${srcFile}`)
     if (optionsArr.length === 0) {
         console.info('🫙 No dependencies to process. Exiting.')
-        process.exit(0)
+        return
     }
 
     await mkdir(targetDir, { recursive: true });
     console.info(`🏃 Updating ${targetDir} for ${optionsArr.length} dependency(ies). Minify: ${minify}`)
 
     console.time('Build')
-    await Promise.all(optionsArr.map((options) => esbuild.build(options)))
+    // await Promise.all(optionsArr.map((options) => esbuild.build(options)))
+    for (const options of optionsArr) {
+        await esbuild.build(options)
+    }
     console.timeEnd('Build')
     console.log(`🎉 Updated ${targetDir} dir.`)
 }

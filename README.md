@@ -103,8 +103,9 @@ npx vendeps [options]
 
 | Option | Description |
 |---|---|
-| `--minify` | Minify the output bundles. Also activates automatically when `NODE_ENV=production`. |
+| `--minify` | Minify the output bundles. |
 | `--target <dir>` | Output to `<dir>/` instead of the default `dependencies/`. The directory is created if it doesn't exist. |
+| `--src <file>` | Path to the `package.json` file (defaults to `./package.json`). |
 | `--help` | Show usage information and exit. |
 
 ### Examples
@@ -113,7 +114,7 @@ npx vendeps [options]
 # Bundle everything into dependencies/
 npx vendeps
 
-# Minified production bundles
+# Minified bundles
 npx vendeps --minify
 
 # Output to a custom folder

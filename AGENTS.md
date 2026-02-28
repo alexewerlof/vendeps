@@ -11,26 +11,12 @@ The primary use case is for front-end web applications that want to use NPM pack
 
 ## CLI
 
-- `npx vendeps` — Run the tool to bundle all dependencies.
-- `npx vendeps --minify` — Minify the output bundles. Also activates when `NODE_ENV=production`.
-- `npx vendeps --target <dir>` — Output bundles to `<dir>/` instead of the default `dependencies/` (the directory will be created if it doesn't exist).
-- `npx vendeps --help` — Show usage information and exit.
+Read [./README.md] for further instructions about the CLI arguments and working logic.
 
 ## Architecture
 
 - **`index.js`** — CLI entry point. Reads `package.json`, invokes the parser to get esbuild options, creates the target directory, and runs esbuild in parallel for each dependency.
 - **`parser.js`** — Pure logic for config parsing and esbuild option generation. Exports `toEsbuildOptionsArr()` (public) and `_test` (for unit testing internals). Uses `jty` for type-checking utilities.
-
-## Per-dependency configuration
-
-Each dependency can be customized via the `"vendeps"` key in `package.json`. If no config is provided, the default is `export * from '<packageName>'`.
-
-- **Skip a dependency**: Set it to `null` or `false`.
-- **Custom source path**: Set it to a string, e.g. `"my-dep": "path/to/file.js"`.
-- **Full config object**: `{ "from": "...", "export": "...", "define": { ... } }`
-  - `from` — The import source (defaults to the package name).
-  - `export` — The export style, e.g. `"*"`, `"default"` (defaults to `"*"`).
-  - `define` — An object of esbuild `define` replacements, or an array of strings (each set to `"true"`).
 
 # Tests
 
